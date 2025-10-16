@@ -16,23 +16,71 @@
         android:padding="8dp"
         android:gravity="center_vertical">
 
-        <Spinner
-            android:id="@+id/albumSpinner"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:spinnerMode="dropdown" />
-
-        <!-- Rename Album Button (pencil icon) -->
+        <!-- Rename Album Button -->
         <ImageButton
             android:id="@+id/btnRenameAlbum"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_edit"
             android:contentDescription="Rename Album"
-            app:tint="@color/black"
-            android:padding="4dp" />
+            android:padding="4dp"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/black" />
+
+        <!-- Album Spinner -->
+        <Spinner
+            android:id="@+id/albumSpinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:spinnerMode="dropdown" />
+
+        <!-- Search Button -->
+        <ImageButton
+            android:id="@+id/btnSearch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Search Photos"
+            android:padding="4dp"
+            android:src="@android:drawable/ic_menu_search"
+            app:tint="@color/black" />
+
+    </LinearLayout>
+
+    <!-- Search Results Header (Visible only during search) -->
+    <LinearLayout
+        android:id="@+id/searchHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/albumHeader"
+        android:orientation="horizontal"
+        android:background="#E3F2FD"
+        android:padding="12dp"
+        android:visibility="gone"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvSearchResults"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Search Results"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnCancelSearch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel Search"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/purple_500"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
     </LinearLayout>
 
     <!-- RecyclerView for Photos -->
@@ -40,12 +88,12 @@
         android:id="@+id/recyclerViewPhotos"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/albumHeader"
+        android:layout_below="@id/searchHeader"
         android:layout_above="@+id/fabAddAlbum"
         android:scrollbars="vertical"
         tools:listitem="@layout/item_image" />
 
-    <!-- Add Photo Button (visible on main screen and full-screen) -->
+    <!-- Add Photo Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnAddPhoto"
         android:layout_width="wrap_content"

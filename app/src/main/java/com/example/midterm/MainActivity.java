@@ -13,9 +13,12 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.InputType;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -27,6 +30,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -35,11 +39,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import android.util.Log;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_READ_IMAGES = 100;
     private static final int REQUEST_CODE_PICK_IMAGE = 101;
+    private ExecutorService databaseExecutor = Executors.newSingleThreadExecutor();
+    private static final String TAG = "MainActivity";
+//    private boolean isSearching = false;
+//    private String currentSearchQuery = "";
+//    private LinearLayout searchHeader;
+//    private TextView tvSearchResults;
+//    private Button btnCancelSearch;
 
     RecyclerView recyclerView;
     ImageAdapter imageAdapter;
@@ -78,6 +93,14 @@ public class MainActivity extends AppCompatActivity {
         fabAddAlbum.setOnClickListener(v -> showAddAlbumDialog());
         btnRenameAlbum.setOnClickListener(v -> showRenameAlbumDialog());
         btnAddPhoto.setOnClickListener(v -> openImagePicker());
+        //search
+        try {
+            ImageButton btnSearch = findViewById(R.id.btnSearch);
+            btnSearch.setOnClickListener(v -> showSearchDialog());
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing search button", e);
+        }
+
     }
 
     // Album Management
@@ -273,6 +296,9 @@ public class MainActivity extends AppCompatActivity {
 
         imageAdapter = new ImageAdapter(this, imageUris);
         recyclerView.setAdapter(imageAdapter);
+        if (imageAdapter != null) {
+            imageAdapter.updateData(imageUris);
+        }
     }
 
     private void showAlbumPhotos() {
@@ -299,6 +325,97 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Permission denied. Cannot load images.", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+
+
+    // Add the search dialog method
+    private void showSearchDialog() {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Search Photos by Tag");
+            builder.setMessage("Enter a tag to search for photos");
+
+            final EditText input = new EditText(this);
+            input.setHint("e.g., vacation, family, beach");
+            builder.setView(input);
+
+            builder.setPositiveButton("Search", (dialog, which) -> {
+                String searchText = input.getText().toString().trim();
+                if (!searchText.isEmpty()) {
+                    performTagSearch(searchText);
+                } else {
+                    showToast("Please enter a search term");
+                }
+            });
+
+            builder.setNegativeButton("Cancel", null);
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing search dialog", e);
+            showToast("Error opening search");
+        }
+    }
+
+    private void performTagSearch(String keyword) {
+        showToast("Searching for: " + keyword);
+
+        databaseExecutor.execute(() -> {
+            try {
+                AppDatabase db = AppDatabase.getDatabase(this);
+                PhotoDao photoDao = db.photoDao();
+
+                // First, let's check if we have any photos in the database
+                List<Photo> allPhotos = photoDao.getAllPhotos();
+                Log.d(TAG, "Total photos in DB: " + allPhotos.size());
+
+                // Now search by tag
+                List<Photo> photos = photoDao.searchByTag(keyword);
+                Log.d(TAG, "Found " + photos.size() + " photos with tag: " + keyword);
+
+                List<Uri> searchResults = new ArrayList<>();
+                for (Photo photo : photos) {
+                    try {
+                        Uri uri = Uri.parse(photo.uri);
+                        searchResults.add(uri);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Invalid URI: " + photo.uri, e);
+                    }
+                }
+
+                runOnUiThread(() -> {
+                    if (searchResults.isEmpty()) {
+                        showToast("No photos found with tag: " + keyword);
+                        // Show a sample message and keep current photos
+                        imageAdapter.updateData(new ArrayList<>());
+                    } else {
+                        imageAdapter.updateData(searchResults);
+                        showToast("Found " + searchResults.size() + " photos");
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Search error", e);
+                runOnUiThread(() -> {
+                    showToast("Search failed: " + e.getMessage());
+                    // Fallback: show all images from gallery
+                    loadImagesFromGallery();
+                });
+            }
+        });
+    }
+
+    private void showToast(String message) {
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (databaseExecutor != null) {
+            databaseExecutor.shutdown();
         }
     }
 }

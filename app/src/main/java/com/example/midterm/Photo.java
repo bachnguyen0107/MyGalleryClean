@@ -8,10 +8,13 @@ import androidx.room.PrimaryKey;
 public class Photo {
     @PrimaryKey(autoGenerate = true)
     public int id;
+
     @ColumnInfo(name = "uri")
     public String uri;
+
     @ColumnInfo(name = "album_id")
     public int albumId;
+
     @ColumnInfo(name = "tag")
     public String tag;
 
@@ -21,4 +24,3 @@ public class Photo {
         this.tag = tag;
     }
 }
-
