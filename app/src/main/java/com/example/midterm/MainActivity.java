@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Initialize ALL UI elements first
+        // Initialize ALL UI elements
         initializeUI();
 
         prefs = getSharedPreferences("PhotoAlbums", MODE_PRIVATE);
@@ -405,7 +405,7 @@ public class MainActivity extends AppCompatActivity {
         tvSearchResults.setText(resultsText);
         searchHeader.setVisibility(View.VISIBLE);
 
-        // Update the RecyclerView layout - modern approach
+
         RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) recyclerView.getLayoutParams();
         params.removeRule(RelativeLayout.BELOW); // Clear existing rules
         params.addRule(RelativeLayout.BELOW, R.id.searchHeader);
@@ -420,13 +420,11 @@ public class MainActivity extends AppCompatActivity {
         currentSearchQuery = "";
         searchHeader.setVisibility(View.GONE);
 
-        // Reset the RecyclerView layout - modern approach
         RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) recyclerView.getLayoutParams();
         params.removeRule(RelativeLayout.BELOW); // Clear existing rules
         params.addRule(RelativeLayout.BELOW, R.id.albumHeader);
         recyclerView.setLayoutParams(params);
 
-        // Force layout update
         recyclerView.requestLayout();
 
         // Reload the original content based on current album
