@@ -31,6 +31,10 @@
             android:exported="false"
             android:theme="@style/Theme.MyGallery.NoActionBar" />
 
+        <activity
+            android:name=".SlideShowActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
         <!-- later add login/register pages -->
 <!--        <activity-->
 <!--            android:name=".LoginActivity"-->

@@ -111,6 +111,18 @@
         android:orientation="horizontal"
         android:gravity="end"
         android:padding="16dp">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSlideshow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Slideshow"
+            android:textColor="@android:color/white"
+            app:icon="@drawable/ic_slideshow"
+            app:iconTint="@android:color/white"
+            app:backgroundTint="@color/purple_500"
+            app:iconPadding="8dp"
+            app:cornerRadius="28dp"
+            android:layout_marginEnd="16dp" />
 
         <!-- Add Photo Button -->
         <com.google.android.material.button.MaterialButton
