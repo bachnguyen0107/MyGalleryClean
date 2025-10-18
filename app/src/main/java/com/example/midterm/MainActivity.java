@@ -12,16 +12,19 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.InputType;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -30,7 +33,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.room.Room;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -43,18 +45,17 @@ import android.util.Log;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_READ_IMAGES = 100;
     private static final int REQUEST_CODE_PICK_IMAGE = 101;
     private ExecutorService databaseExecutor = Executors.newSingleThreadExecutor();
     private static final String TAG = "MainActivity";
-//    private boolean isSearching = false;
-//    private String currentSearchQuery = "";
-//    private LinearLayout searchHeader;
-//    private TextView tvSearchResults;
-//    private Button btnCancelSearch;
+    private boolean isSearching = false;
+    private String currentSearchQuery = "";
+    private LinearLayout searchHeader;
+    private TextView tvSearchResults;
+    private Button btnCancelSearch;
 
     RecyclerView recyclerView;
     ImageAdapter imageAdapter;
@@ -64,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     FloatingActionButton fabAddAlbum;
     MaterialButton btnAddPhoto;
     ImageButton btnRenameAlbum;
+    ImageButton btnSearch;
 
     SharedPreferences prefs;
     Map<String, List<String>> albums = new HashMap<>();
@@ -75,6 +77,35 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // Initialize ALL UI elements first
+        initializeUI();
+
+        prefs = getSharedPreferences("PhotoAlbums", MODE_PRIVATE);
+        loadAlbums();
+        setupAlbumSpinner();
+        checkAndLoadImages();
+
+        setupClickListeners();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (isSearching) {
+                    cancelSearch();
+                } else {
+                    setEnabled(false);
+                    MainActivity.super.onBackPressed();
+                }
+            }
+        });
+    }
+
+    private void initializeUI() {
+        // Initialize search UI elements
+        searchHeader = findViewById(R.id.searchHeader);
+        tvSearchResults = findViewById(R.id.tvSearchResults);
+        btnCancelSearch = findViewById(R.id.btnCancelSearch);
+
         // UI references
         recyclerView = findViewById(R.id.recyclerViewPhotos);
         recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
@@ -83,28 +114,24 @@ public class MainActivity extends AppCompatActivity {
         fabAddAlbum = findViewById(R.id.fabAddAlbum);
         btnRenameAlbum = findViewById(R.id.btnRenameAlbum);
         btnAddPhoto = findViewById(R.id.btnAddPhoto);
+        btnSearch = findViewById(R.id.btnSearch);
 
-        prefs = getSharedPreferences("PhotoAlbums", MODE_PRIVATE);
-        loadAlbums();
+        // Initialize adapter with empty list
+        imageAdapter = new ImageAdapter(this, new ArrayList<>());
+        recyclerView.setAdapter(imageAdapter);
+    }
 
-        setupAlbumSpinner();
-        checkAndLoadImages();
+    private void setupClickListeners() {
+        // Set up cancel search button
+        btnCancelSearch.setOnClickListener(v -> cancelSearch());
 
         fabAddAlbum.setOnClickListener(v -> showAddAlbumDialog());
         btnRenameAlbum.setOnClickListener(v -> showRenameAlbumDialog());
         btnAddPhoto.setOnClickListener(v -> openImagePicker());
-        //search
-        try {
-            ImageButton btnSearch = findViewById(R.id.btnSearch);
-            btnSearch.setOnClickListener(v -> showSearchDialog());
-        } catch (Exception e) {
-            Log.e(TAG, "Error initializing search button", e);
-        }
-
+        btnSearch.setOnClickListener(v -> showSearchDialog());
     }
 
     // Album Management
-
     private void loadAlbums() {
         albums.clear();
         Map<String, ?> all = prefs.getAll();
@@ -112,8 +139,11 @@ public class MainActivity extends AppCompatActivity {
             String urisString = prefs.getString(key, "");
             List<String> uris = new ArrayList<>();
             if (!urisString.isEmpty()) {
-                for (String u : urisString.split(",")) {
-                    uris.add(u);
+                String[] uriArray = urisString.split(",");
+                for (String u : uriArray) {
+                    if (!u.isEmpty()) {
+                        uris.add(u);
+                    }
                 }
             }
             albums.put(key, uris);
@@ -130,9 +160,16 @@ public class MainActivity extends AppCompatActivity {
         for (Map.Entry<String, List<String>> entry : albums.entrySet()) {
             StringBuilder sb = new StringBuilder();
             for (String u : entry.getValue()) {
-                sb.append(u).append(",");
+                if (!u.isEmpty()) {
+                    sb.append(u).append(",");
+                }
             }
-            editor.putString(entry.getKey(), sb.toString());
+            // Remove trailing comma
+            String result = sb.toString();
+            if (result.endsWith(",")) {
+                result = result.substring(0, result.length() - 1);
+            }
+            editor.putString(entry.getKey(), result);
         }
         editor.apply();
     }
@@ -146,11 +183,17 @@ public class MainActivity extends AppCompatActivity {
         albumSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
-                currentAlbum = albumNames.get(position);
-                if (currentAlbum.equals("All Photos")) {
-                    loadImagesFromGallery();
-                } else {
-                    showAlbumPhotos();
+                String selectedAlbum = albumNames.get(position);
+                if (!selectedAlbum.equals(currentAlbum)) {
+                    currentAlbum = selectedAlbum;
+                    if (isSearching) {
+                        cancelSearch();
+                    }
+                    if (currentAlbum.equals("All Photos")) {
+                        loadImagesFromGallery();
+                    } else {
+                        showAlbumPhotos();
+                    }
                 }
             }
 
@@ -165,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
         final EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setHint("Enter album name");
         builder.setView(input);
 
         builder.setPositiveButton("Create", (dialog, which) -> {
@@ -173,6 +217,15 @@ public class MainActivity extends AppCompatActivity {
                 albums.put(name, new ArrayList<>());
                 saveAlbums();
                 setupAlbumSpinner();
+
+                // Select the new album
+                for (int i = 0; i < albumSpinner.getCount(); i++) {
+                    if (albumSpinner.getItemAtPosition(i).equals(name)) {
+                        albumSpinner.setSelection(i);
+                        break;
+                    }
+                }
+
                 Toast.makeText(this, "Album created: " + name, Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "Invalid or duplicate name", Toast.LENGTH_SHORT).show();
@@ -204,7 +257,15 @@ public class MainActivity extends AppCompatActivity {
                 albums.put(newName, images);
                 saveAlbums();
                 setupAlbumSpinner();
-                currentAlbum = newName;
+
+                // Select the renamed album
+                for (int i = 0; i < albumSpinner.getCount(); i++) {
+                    if (albumSpinner.getItemAtPosition(i).equals(newName)) {
+                        albumSpinner.setSelection(i);
+                        break;
+                    }
+                }
+
                 Toast.makeText(this, "Album renamed to: " + newName, Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "Invalid or duplicate name", Toast.LENGTH_SHORT).show();
@@ -216,7 +277,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Add Photo to Album
-
     private void openImagePicker() {
         if (currentAlbum.equals("All Photos")) {
             Toast.makeText(this, "Select an album to add photos", Toast.LENGTH_SHORT).show();
@@ -236,18 +296,21 @@ public class MainActivity extends AppCompatActivity {
             Uri selectedImage = data.getData();
             if (selectedImage != null) {
                 List<String> albumImages = albums.get(currentAlbum);
-                if (!albumImages.contains(selectedImage.toString())) {
-                    albumImages.add(selectedImage.toString());
+                String imageUriString = selectedImage.toString();
+
+                if (!albumImages.contains(imageUriString)) {
+                    albumImages.add(imageUriString);
                     saveAlbums();
                     showAlbumPhotos();
                     Toast.makeText(this, "Photo added to " + currentAlbum, Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Photo already in album", Toast.LENGTH_SHORT).show();
                 }
             }
         }
     }
 
     // Image Loading
-
     private void checkAndLoadImages() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
@@ -273,46 +336,191 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadImagesFromGallery() {
-        imageUris.clear();
-        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        String[] projection = {MediaStore.Images.Media._ID};
+        new Thread(() -> {
+            List<Uri> loadedUris = new ArrayList<>();
+            Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+            String[] projection = {MediaStore.Images.Media._ID};
 
-        try (Cursor cursor = getContentResolver().query(
-                uri,
-                projection,
-                null,
-                null,
-                MediaStore.Images.Media.DATE_ADDED + " DESC"
-        )) {
-            if (cursor != null) {
-                int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
-                while (cursor.moveToNext()) {
-                    long id = cursor.getLong(idColumn);
-                    Uri contentUri = ContentUris.withAppendedId(uri, id);
-                    imageUris.add(contentUri);
+            try (Cursor cursor = getContentResolver().query(
+                    uri,
+                    projection,
+                    null,
+                    null,
+                    MediaStore.Images.Media.DATE_ADDED + " DESC"
+            )) {
+                if (cursor != null) {
+                    int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+                    while (cursor.moveToNext()) {
+                        long id = cursor.getLong(idColumn);
+                        Uri contentUri = ContentUris.withAppendedId(uri, id);
+                        loadedUris.add(contentUri);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error loading images from gallery", e);
+            }
+
+            List<Uri> finalLoadedUris = loadedUris;
+            runOnUiThread(() -> {
+                imageUris = finalLoadedUris;
+                imageAdapter.updateData(imageUris);
+                Log.d(TAG, "Loaded " + imageUris.size() + " images from gallery");
+            });
+        }).start();
+    }
+
+    private void showAlbumPhotos() {
+        List<String> uriStrings = albums.get(currentAlbum);
+        List<Uri> albumUris = new ArrayList<>();
+
+        if (uriStrings != null) {
+            for (String uriString : uriStrings) {
+                try {
+                    if (!uriString.isEmpty()) {
+                        Uri uri = Uri.parse(uriString);
+                        albumUris.add(uri);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Invalid URI in album: " + uriString, e);
                 }
             }
         }
 
-        imageAdapter = new ImageAdapter(this, imageUris);
-        recyclerView.setAdapter(imageAdapter);
-        if (imageAdapter != null) {
-            imageAdapter.updateData(imageUris);
+        imageAdapter.updateData(albumUris);
+        Log.d(TAG, "Showing " + albumUris.size() + " photos in album: " + currentAlbum);
+    }
+
+    // Search Functionality
+    private void showSearchResultsHeader(String query, int resultCount) {
+        isSearching = true;
+        currentSearchQuery = query;
+
+        String resultsText;
+        if (resultCount == 0) {
+            resultsText = "No results for: \"" + query + "\"";
+        } else {
+            resultsText = resultCount + " results for: \"" + query + "\"";
+        }
+
+        tvSearchResults.setText(resultsText);
+        searchHeader.setVisibility(View.VISIBLE);
+
+        // Update the RecyclerView layout - modern approach
+        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) recyclerView.getLayoutParams();
+        params.removeRule(RelativeLayout.BELOW); // Clear existing rules
+        params.addRule(RelativeLayout.BELOW, R.id.searchHeader);
+        recyclerView.setLayoutParams(params);
+
+        // Force layout update
+        recyclerView.requestLayout();
+    }
+
+    private void cancelSearch() {
+        isSearching = false;
+        currentSearchQuery = "";
+        searchHeader.setVisibility(View.GONE);
+
+        // Reset the RecyclerView layout - modern approach
+        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) recyclerView.getLayoutParams();
+        params.removeRule(RelativeLayout.BELOW); // Clear existing rules
+        params.addRule(RelativeLayout.BELOW, R.id.albumHeader);
+        recyclerView.setLayoutParams(params);
+
+        // Force layout update
+        recyclerView.requestLayout();
+
+        // Reload the original content based on current album
+        if (currentAlbum.equals("All Photos")) {
+            loadImagesFromGallery();
+        } else {
+            showAlbumPhotos();
+        }
+
+        showToast("Search cancelled");
+        Log.d(TAG, "Search cancelled, returning to: " + currentAlbum);
+    }
+
+    private void showSearchDialog() {
+        // If already searching, offer to cancel or new search
+        if (isSearching) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Search Active")
+                    .setMessage("You're currently searching for: \"" + currentSearchQuery + "\"")
+                    .setPositiveButton("New Search", (dialog, which) -> showSearchInputDialog())
+                    .setNegativeButton("Cancel Search", (dialog, which) -> cancelSearch())
+                    .setNeutralButton("Close", null)
+                    .show();
+        } else {
+            showSearchInputDialog();
         }
     }
 
-    private void showAlbumPhotos() {
-        List<String> uris = albums.get(currentAlbum);
-        List<Uri> albumUris = new ArrayList<>();
-        for (String s : uris) {
-            albumUris.add(Uri.parse(s));
+    private void showSearchInputDialog() {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Search Photos by Tag");
+
+            final EditText input = new EditText(this);
+            input.setHint("e.g., vacation, family, beach");
+            builder.setView(input);
+
+            builder.setPositiveButton("Search", (dialog, which) -> {
+                String searchText = input.getText().toString().trim();
+                if (!searchText.isEmpty()) {
+                    performTagSearch(searchText);
+                } else {
+                    showToast("Please enter a search term");
+                }
+            });
+
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing search dialog", e);
+            showToast("Error opening search");
         }
-        imageAdapter = new ImageAdapter(this, albumUris);
-        recyclerView.setAdapter(imageAdapter);
     }
 
-    //  Permission Result
+    private void performTagSearch(String keyword) {
+        showToast("Searching for: " + keyword);
 
+        databaseExecutor.execute(() -> {
+            try {
+                AppDatabase db = AppDatabase.getDatabase(this);
+                PhotoDao photoDao = db.photoDao();
+                List<Photo> photos = photoDao.searchByTag(keyword);
+
+                List<Uri> searchResults = new ArrayList<>();
+                for (Photo photo : photos) {
+                    try {
+                        Uri uri = Uri.parse(photo.uri);
+                        searchResults.add(uri);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Invalid URI: " + photo.uri, e);
+                    }
+                }
+
+                runOnUiThread(() -> {
+                    if (searchResults.isEmpty()) {
+                        showToast("No photos found with tag: " + keyword);
+                        showSearchResultsHeader(keyword, 0);
+                    } else {
+                        showSearchResultsHeader(keyword, searchResults.size());
+                    }
+                    imageAdapter.updateData(searchResults);
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Search error", e);
+                runOnUiThread(() -> {
+                    showToast("Search failed: " + e.getMessage());
+                    cancelSearch();
+                });
+            }
+        });
+    }
+
+    // Permission Result
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions,
@@ -329,88 +537,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-    // Add the search dialog method
-    private void showSearchDialog() {
-        try {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Search Photos by Tag");
-            builder.setMessage("Enter a tag to search for photos");
-
-            final EditText input = new EditText(this);
-            input.setHint("e.g., vacation, family, beach");
-            builder.setView(input);
-
-            builder.setPositiveButton("Search", (dialog, which) -> {
-                String searchText = input.getText().toString().trim();
-                if (!searchText.isEmpty()) {
-                    performTagSearch(searchText);
-                } else {
-                    showToast("Please enter a search term");
-                }
-            });
-
-            builder.setNegativeButton("Cancel", null);
-
-            AlertDialog dialog = builder.create();
-            dialog.show();
-        } catch (Exception e) {
-            Log.e(TAG, "Error showing search dialog", e);
-            showToast("Error opening search");
-        }
-    }
-
-    private void performTagSearch(String keyword) {
-        showToast("Searching for: " + keyword);
-
-        databaseExecutor.execute(() -> {
-            try {
-                AppDatabase db = AppDatabase.getDatabase(this);
-                PhotoDao photoDao = db.photoDao();
-
-                // First, let's check if we have any photos in the database
-                List<Photo> allPhotos = photoDao.getAllPhotos();
-                Log.d(TAG, "Total photos in DB: " + allPhotos.size());
-
-                // Now search by tag
-                List<Photo> photos = photoDao.searchByTag(keyword);
-                Log.d(TAG, "Found " + photos.size() + " photos with tag: " + keyword);
-
-                List<Uri> searchResults = new ArrayList<>();
-                for (Photo photo : photos) {
-                    try {
-                        Uri uri = Uri.parse(photo.uri);
-                        searchResults.add(uri);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Invalid URI: " + photo.uri, e);
-                    }
-                }
-
-                runOnUiThread(() -> {
-                    if (searchResults.isEmpty()) {
-                        showToast("No photos found with tag: " + keyword);
-                        // Show a sample message and keep current photos
-                        imageAdapter.updateData(new ArrayList<>());
-                    } else {
-                        imageAdapter.updateData(searchResults);
-                        showToast("Found " + searchResults.size() + " photos");
-                    }
-                });
-
-            } catch (Exception e) {
-                Log.e(TAG, "Search error", e);
-                runOnUiThread(() -> {
-                    showToast("Search failed: " + e.getMessage());
-                    // Fallback: show all images from gallery
-                    loadImagesFromGallery();
-                });
-            }
-        });
-    }
-
     private void showToast(String message) {
         runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
