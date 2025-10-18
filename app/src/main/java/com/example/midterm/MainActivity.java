@@ -32,6 +32,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
@@ -56,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout searchHeader;
     private TextView tvSearchResults;
     private Button btnCancelSearch;
+    private ImageButton btnToggleView;
+    private boolean isGridView = true;
+    private GridLayoutManager gridLayoutManager;
+    private LinearLayoutManager listLayoutManager;
 
     RecyclerView recyclerView;
     ImageAdapter imageAdapter;
@@ -108,13 +113,19 @@ public class MainActivity extends AppCompatActivity {
 
         // UI references
         recyclerView = findViewById(R.id.recyclerViewPhotos);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
-
         albumSpinner = findViewById(R.id.albumSpinner);
         fabAddAlbum = findViewById(R.id.fabAddAlbum);
         btnRenameAlbum = findViewById(R.id.btnRenameAlbum);
         btnAddPhoto = findViewById(R.id.btnAddPhoto);
         btnSearch = findViewById(R.id.btnSearch);
+        btnToggleView = findViewById(R.id.btnToggleView);
+
+        // Setup layout managers
+        gridLayoutManager = new GridLayoutManager(this, 3); // 3 columns for grid
+        listLayoutManager = new LinearLayoutManager(this); // 1 column for list
+
+        // Start with grid view
+        recyclerView.setLayoutManager(gridLayoutManager);
 
         // Initialize adapter with empty list
         imageAdapter = new ImageAdapter(this, new ArrayList<>());
@@ -129,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
         btnRenameAlbum.setOnClickListener(v -> showRenameAlbumDialog());
         btnAddPhoto.setOnClickListener(v -> openImagePicker());
         btnSearch.setOnClickListener(v -> showSearchDialog());
+        btnToggleView.setOnClickListener(v -> toggleView());
     }
 
     // Album Management
@@ -364,6 +376,7 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 imageUris = finalLoadedUris;
                 imageAdapter.updateData(imageUris);
+                applyCurrentViewType();
                 Log.d(TAG, "Loaded " + imageUris.size() + " images from gallery");
             });
         }).start();
@@ -387,7 +400,47 @@ public class MainActivity extends AppCompatActivity {
         }
 
         imageAdapter.updateData(albumUris);
+        applyCurrentViewType(); // ADD THIS LINE
         Log.d(TAG, "Showing " + albumUris.size() + " photos in album: " + currentAlbum);
+    }
+
+    // View Toggle Methods
+    private void toggleView() {
+        isGridView = !isGridView;
+
+        if (isGridView) {
+            // Switch to grid view
+            recyclerView.setLayoutManager(gridLayoutManager);
+            btnToggleView.setImageResource(R.drawable.ic_list_view);
+            btnToggleView.setContentDescription("Switch to list view");
+            if (imageAdapter != null) {
+                imageAdapter.setViewType(ImageAdapter.VIEW_TYPE_GRID);
+            }
+            showToast("Grid View");
+        } else {
+            // Switch to list view
+            recyclerView.setLayoutManager(listLayoutManager);
+            btnToggleView.setImageResource(R.drawable.ic_grid_view);
+            btnToggleView.setContentDescription("Switch to grid view");
+            if (imageAdapter != null) {
+                imageAdapter.setViewType(ImageAdapter.VIEW_TYPE_LIST);
+            }
+            showToast("List View");
+        }
+    }
+
+    private void applyCurrentViewType() {
+        if (isGridView) {
+            recyclerView.setLayoutManager(gridLayoutManager);
+            if (imageAdapter != null) {
+                imageAdapter.setViewType(ImageAdapter.VIEW_TYPE_GRID);
+            }
+        } else {
+            recyclerView.setLayoutManager(listLayoutManager);
+            if (imageAdapter != null) {
+                imageAdapter.setViewType(ImageAdapter.VIEW_TYPE_LIST);
+            }
+        }
     }
 
     // Search Functionality
@@ -405,13 +458,11 @@ public class MainActivity extends AppCompatActivity {
         tvSearchResults.setText(resultsText);
         searchHeader.setVisibility(View.VISIBLE);
 
-
         RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) recyclerView.getLayoutParams();
         params.removeRule(RelativeLayout.BELOW); // Clear existing rules
         params.addRule(RelativeLayout.BELOW, R.id.searchHeader);
         recyclerView.setLayoutParams(params);
 
-        // Force layout update
         recyclerView.requestLayout();
     }
 
@@ -434,6 +485,7 @@ public class MainActivity extends AppCompatActivity {
             showAlbumPhotos();
         }
 
+        applyCurrentViewType(); // ADD THIS LINE
         showToast("Search cancelled");
         Log.d(TAG, "Search cancelled, returning to: " + currentAlbum);
     }
@@ -506,6 +558,7 @@ public class MainActivity extends AppCompatActivity {
                         showSearchResultsHeader(keyword, searchResults.size());
                     }
                     imageAdapter.updateData(searchResults);
+                    applyCurrentViewType(); // ADD THIS LINE
                 });
 
             } catch (Exception e) {
@@ -533,7 +586,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
 
     private void showToast(String message) {
         runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());

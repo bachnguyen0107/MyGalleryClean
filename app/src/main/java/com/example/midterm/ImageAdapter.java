@@ -15,21 +15,38 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
+public class ImageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private Context context;
     private List<Uri> imageUris;
     private Map<Uri, String> imageTags = new HashMap<>();
     private static final String TAG = "ImageAdapter";
 
+    // View types
+    public static final int VIEW_TYPE_GRID = 0;
+    public static final int VIEW_TYPE_LIST = 1;
+
+    private int currentViewType = VIEW_TYPE_GRID; // Default to grid view
+
     public ImageAdapter(Context context, List<Uri> imageUris) {
         this.context = context;
         this.imageUris = imageUris != null ? imageUris : new ArrayList<>();
+    }
 
+    public void setViewType(int viewType) {
+        this.currentViewType = viewType;
+        notifyDataSetChanged();
+    }
+
+    public int getViewType() {
+        return currentViewType;
     }
 
     public void loadTagsForImages() {
@@ -60,40 +77,100 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         }).start();
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        return currentViewType;
+    }
+
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_image, parent, false);
-        return new ViewHolder(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+
+        if (viewType == VIEW_TYPE_LIST) {
+            View view = inflater.inflate(R.layout.item_image, parent, false); // list view layout
+            return new ListViewHolder(view);
+        } else {
+            View view = inflater.inflate(R.layout.item_image_grid, parent, false); // Grid view layout
+            return new GridViewHolder(view);
+        }
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         try {
             Uri imageUri = imageUris.get(position);
 
-            // Load image with Glide
-            Glide.with(context)
-                    .load(imageUri)
-                    .into(holder.imageView);
-
-            // Set tag text
-            String tags = imageTags.get(imageUri);
-            if (tags != null && !tags.isEmpty()) {
-                String displayTags = formatTagsForDisplay(tags);
-                holder.textViewTag.setText(displayTags);
-                holder.textViewTag.setVisibility(View.VISIBLE);
-            } else {
-                holder.textViewTag.setVisibility(View.GONE);
+            if (holder instanceof GridViewHolder) {
+                bindGridViewHolder((GridViewHolder) holder, imageUri);
+            } else if (holder instanceof ListViewHolder) {
+                bindListViewHolder((ListViewHolder) holder, imageUri);
             }
 
-            holder.imageView.setOnClickListener(v -> {
-                Intent intent = new Intent(context, FullScreenActivity.class);
-                intent.putExtra("imageUri", imageUri.toString());
-                context.startActivity(intent);
-            });
         } catch (Exception e) {
             Log.e(TAG, "Error binding view holder", e);
+        }
+    }
+
+    private void bindGridViewHolder(GridViewHolder holder, Uri imageUri) {
+        // Load image
+        Glide.with(context)
+                .load(imageUri)
+                .into(holder.imageView);
+
+        // Set tag text
+        String tags = imageTags.get(imageUri);
+        if (tags != null && !tags.isEmpty()) {
+            String displayTags = formatTagsForDisplay(tags);
+            holder.textViewTag.setText(displayTags);
+            holder.textViewTag.setVisibility(View.VISIBLE);
+        } else {
+            holder.textViewTag.setVisibility(View.GONE);
+        }
+
+        holder.itemView.setOnClickListener(v -> {
+            openFullScreenActivity(imageUri);
+        });
+    }
+
+    private void bindListViewHolder(ListViewHolder holder, Uri imageUri) {
+        // Load image
+        Glide.with(context)
+                .load(imageUri)
+                .into(holder.imageView);
+
+        // Set file name
+        String fileName = getFileNameFromUri(imageUri);
+        holder.textViewFileName.setText(fileName);
+
+        // Set tags
+        String tags = imageTags.get(imageUri);
+        if (tags != null && !tags.isEmpty()) {
+            holder.textViewTag.setText("Tags: " + tags);
+            holder.textViewTag.setVisibility(View.VISIBLE);
+        } else {
+            holder.textViewTag.setText("No tags");
+            holder.textViewTag.setVisibility(View.VISIBLE);
+        }
+
+        // Set date (using current time as placeholder)
+        String dateString = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(new Date());
+        holder.textViewDate.setText(dateString);
+
+        holder.itemView.setOnClickListener(v -> {
+            openFullScreenActivity(imageUri);
+        });
+    }
+
+    private String getFileNameFromUri(Uri uri) {
+        try {
+            String path = uri.getLastPathSegment();
+            if (path != null && path.contains("/")) {
+                return path.substring(path.lastIndexOf("/") + 1);
+            }
+            return path != null ? path : "Image";
+        } catch (Exception e) {
+            return "Image";
         }
     }
 
@@ -114,6 +191,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         }
     }
 
+    private void openFullScreenActivity(Uri imageUri) {
+        Intent intent = new Intent(context, FullScreenActivity.class);
+        intent.putExtra("imageUri", imageUri.toString());
+        context.startActivity(intent);
+    }
+
     @Override
     public int getItemCount() {
         return imageUris != null ? imageUris.size() : 0;
@@ -126,14 +209,31 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         notifyDataSetChanged();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    // Grid View Holder (uses item_image_grid.xml)
+    public static class GridViewHolder extends RecyclerView.ViewHolder {
         ImageView imageView;
         TextView textViewTag;
 
-        public ViewHolder(View itemView) {
+        public GridViewHolder(View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.imageViewItem);
             textViewTag = itemView.findViewById(R.id.textViewTag);
+        }
+    }
+
+    // List View Holder (uses item_image.xml)
+    public static class ListViewHolder extends RecyclerView.ViewHolder {
+        ImageView imageView;
+        TextView textViewFileName;
+        TextView textViewTag;
+        TextView textViewDate;
+
+        public ListViewHolder(View itemView) {
+            super(itemView);
+            imageView = itemView.findViewById(R.id.imageViewItem);
+            textViewFileName = itemView.findViewById(R.id.textViewFileName);
+            textViewTag = itemView.findViewById(R.id.textViewTag);
+            textViewDate = itemView.findViewById(R.id.textViewDate);
         }
     }
 }

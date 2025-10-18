@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:padding="8dp"
     tools:context=".MainActivity">
 
@@ -37,6 +38,18 @@
             android:layout_marginEnd="8dp"
             android:spinnerMode="dropdown" />
 
+        <!-- View Toggle Button -->
+        <ImageButton
+            android:id="@+id/btnToggleView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Toggle View"
+            android:padding="4dp"
+            android:src="@drawable/ic_grid_view"
+            app:tint="@color/black"
+            android:layout_marginEnd="8dp" />
+
         <!-- Search Button -->
         <ImageButton
             android:id="@+id/btnSearch"
@@ -50,12 +63,11 @@
 
     </LinearLayout>
 
-    <!-- Search Results Header (Visible only during search) -->
+    <!-- Search Results Header -->
     <LinearLayout
         android:id="@+id/searchHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/albumHeader"
         android:orientation="horizontal"
         android:background="#E3F2FD"
         android:padding="12dp"
@@ -87,39 +99,42 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewPhotos"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/searchHeader"
-        android:layout_above="@+id/fabAddAlbum"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:scrollbars="vertical"
         tools:listitem="@layout/item_image" />
 
-    <!-- Add Photo Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnAddPhoto"
-        android:layout_width="wrap_content"
+    <!-- Bottom Buttons Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Add Photo"
-        android:textColor="@android:color/white"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="90dp"
-        app:icon="@drawable/ic_add_photo"
-        app:iconTint="@android:color/white"
-        app:backgroundTint="@color/purple_500"
-        app:iconPadding="8dp"
-        app:cornerRadius="28dp" />
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:padding="16dp">
 
-    <!-- Floating Button for Adding Albums -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddAlbum"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@android:drawable/ic_input_add"
-        app:tint="@android:color/white"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_margin="16dp"
-        app:backgroundTint="@color/purple_500" />
+        <!-- Add Photo Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAddPhoto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Photo"
+            android:textColor="@android:color/white"
+            app:icon="@drawable/ic_add_photo"
+            app:iconTint="@android:color/white"
+            app:backgroundTint="@color/purple_500"
+            app:iconPadding="8dp"
+            app:cornerRadius="28dp"
+            android:layout_marginEnd="16dp" />
 
-</RelativeLayout>
+        <!-- Floating Button for Adding Albums -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabAddAlbum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_input_add"
+            app:tint="@android:color/white"
+            app:backgroundTint="@color/purple_500" />
+
+    </LinearLayout>
+
+</LinearLayout>
