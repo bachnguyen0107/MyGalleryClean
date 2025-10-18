@@ -2,7 +2,6 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@android:color/black">
 
     <!-- Fullscreen Image -->
@@ -33,7 +32,6 @@
             android:textStyle="bold" />
 
         <ImageButton
-            android:id="@+id/btnClose"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
@@ -44,101 +42,45 @@
 
     </LinearLayout>
 
-    <!-- Bottom Controls -->
+    <!-- Simple Bottom Controls -->
     <LinearLayout
-        android:id="@+id/controlsLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:background="#80000000"
         android:padding="20dp"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center">
 
-        <!-- Speed Control -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+        <ImageButton
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@android:drawable/ic_media_previous"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Previous"
+            android:tint="@android:color/white"
+            android:layout_marginEnd="16dp"
+            android:onClick="onPreviousClick" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Speed:"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:layout_marginEnd="8dp" />
+        <ImageButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@android:drawable/ic_media_pause"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Play/Pause"
+            android:tint="@android:color/white"
+            android:layout_marginEnd="16dp"
+            android:onClick="onPlayPauseClick" />
 
-            <SeekBar
-                android:id="@+id/seekBarSpeed"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:max="9"
-                android:progress="2" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="3s"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:layout_marginStart="8dp" />
-
-        </LinearLayout>
-
-        <!-- Control Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <ImageButton
-                android:id="@+id/btnMusic"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:src="@android:drawable/ic_media_play"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Toggle Music"
-                android:tint="@android:color/white"
-                android:onClick="onMusicToggleClick" />
-
-            <ImageButton
-                android:id="@+id/btnPrevious"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:src="@android:drawable/ic_media_previous"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Previous"
-                android:tint="@android:color/white"
-                android:layout_marginStart="16dp"
-                android:onClick="onPreviousClick" />
-
-            <ImageButton
-                android:id="@+id/btnPlayPause"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:src="@android:drawable/ic_media_play"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Play/Pause"
-                android:tint="@android:color/white"
-                android:layout_marginStart="16dp"
-                android:onClick="onPlayPauseClick" />
-
-            <ImageButton
-                android:id="@+id/btnNext"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:src="@android:drawable/ic_media_next"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Next"
-                android:tint="@android:color/white"
-                android:layout_marginStart="16dp"
-                android:onClick="onNextClick" />
-
-        </LinearLayout>
+        <ImageButton
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@android:drawable/ic_media_next"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Next"
+            android:tint="@android:color/white"
+            android:onClick="onNextClick" />
 
     </LinearLayout>
 

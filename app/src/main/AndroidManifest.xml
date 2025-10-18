@@ -13,7 +13,9 @@
         android:label="My Gallery"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyGallery">
+        android:theme="@style/Theme.MyGallery"
+        android:requestLegacyExternalStorage="true"
+        >
 
         <!-- Main launcher activity -->
         <activity
@@ -25,7 +27,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Fullscreen viewer (not exported) -->
+        <!-- Fullscreen viewer  -->
         <activity
             android:name=".FullScreenActivity"
             android:exported="false"

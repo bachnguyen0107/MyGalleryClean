@@ -563,7 +563,7 @@ public class MainActivity extends AppCompatActivity {
                         showSearchResultsHeader(keyword, searchResults.size());
                     }
                     imageAdapter.updateData(searchResults);
-                    applyCurrentViewType(); // ADD THIS LINE
+                    applyCurrentViewType();
                 });
 
             } catch (Exception e) {
@@ -578,39 +578,31 @@ public class MainActivity extends AppCompatActivity {
     //Show Slideshow Options
     private void showSlideshowDialog() {
         int currentImageCount = (imageUris != null) ? imageUris.size() : 0;
-        Log.d(TAG, "Slideshow dialog - Current images: " + currentImageCount);
 
         if (currentImageCount == 0) {
             Toast.makeText(this, "No images available for slideshow", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        //max 50 images
+        int imagesToUse = Math.min(50, currentImageCount);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Create Slideshow");
-        builder.setMessage("Select " + currentImageCount + " images from current view or choose specific images:");
 
-        builder.setPositiveButton("Current View (" + currentImageCount + " images)", (dialog, which) -> {
-            Log.d(TAG, "User selected current view slideshow");
+        if (currentImageCount > 50) {
+            builder.setMessage("You have " + currentImageCount + " images. Slideshow have a limit of " + imagesToUse + " images for better performance.");
+        } else {
+            builder.setMessage("Start slideshow with " + imagesToUse + " images?");
+        }
+
+        builder.setPositiveButton("Start Slideshow", (dialog, which) -> {
             startSlideshow(imageUris);
         });
 
-        // For now, we'll use the same functionality for both options
-        // You can implement image selection later
-        builder.setNegativeButton("Select Images", (dialog, which) -> {
-            Log.d(TAG, "User selected custom image selection");
-            // For now, use current view since multi-select is complex
-            startSlideshow(imageUris);
-        });
-
-        builder.setNeutralButton("Cancel", null);
+        builder.setNegativeButton("Cancel", null);
         builder.show();
     }
-
-//    private void showImageSelectionDialog() {
-//        //  open a multi-select dialog for choosing specific images
-//        startSlideshow(imageUris);
-//    }
-
     private void startSlideshow(List<Uri> uris) {
         Log.d(TAG, "Starting slideshow with " + (uris != null ? uris.size() : 0) + " images");
 
@@ -620,37 +612,30 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
+            // 50 IMAGES MAXIMUM
+            List<Uri> limitedUris = uris.subList(0, Math.min(50, uris.size()));
+
+            if (uris.size() > 50) {
+                Toast.makeText(this, "Using first 50 images", Toast.LENGTH_SHORT).show();
+            }
+
             Intent intent = new Intent(this, SlideShowActivity.class);
             ArrayList<String> uriStrings = new ArrayList<>();
-            for (Uri uri : uris) {
+            for (Uri uri : limitedUris) {
                 if (uri != null) {
                     uriStrings.add(uri.toString());
-                    Log.d(TAG, "Adding URI to slideshow: " + uri);
                 }
             }
 
-            if (uriStrings.isEmpty()) {
-                Toast.makeText(this, "No valid images selected", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Store list in in-memory cache to avoid TransactionTooLargeException
-            String cacheKey = SlideshowCache.put(uriStrings);
-            intent.putExtra("slideCacheKey", cacheKey);
-            // Also keep a tiny fallback of the first few to be safe (optional)
-            // intent.putStringArrayListExtra("slideUris", new ArrayList<>(uriStrings.subList(0, Math.min(5, uriStrings.size()))));
-
+            intent.putStringArrayListExtra("slideUris", uriStrings);
             startActivity(intent);
-            Log.d(TAG, "Slideshow activity started successfully");
+            Log.d(TAG, "Slideshow started with " + limitedUris.size() + " images");
 
         } catch (Exception e) {
             Log.e(TAG, "Error starting slideshow: " + e.getMessage(), e);
-            Toast.makeText(this, "Error starting slideshow: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Error starting slideshow", Toast.LENGTH_LONG).show();
         }
-    }
-
-
-    // Permission Result
+    }    // Permission Result
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions,
