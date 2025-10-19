@@ -433,7 +433,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         imageAdapter.updateData(albumUris);
-        applyCurrentViewType(); // ADD THIS LINE
+        applyCurrentViewType();
         Log.d(TAG, "Showing " + albumUris.size() + " photos in album: " + currentAlbum);
     }
 

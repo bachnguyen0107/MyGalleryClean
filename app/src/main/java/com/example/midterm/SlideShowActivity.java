@@ -1,5 +1,6 @@
 package com.example.midterm;
 
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,8 +26,10 @@ public class SlideShowActivity extends AppCompatActivity {
     private List<Uri> slideShowUris;
     private int currentPosition = 0;
     private Handler slideshowHandler;
+    private MediaPlayer mediaPlayer;
 
     private boolean isPlaying = false;
+    private boolean isMusicPlaying = false;
     private int slideDuration = 3000; // 3 seconds per slide
 
     private final Runnable slideshowRunnable = new Runnable() {
@@ -72,8 +75,9 @@ public class SlideShowActivity extends AppCompatActivity {
         initializeViews();
         loadSlideshowData();
 
-        // Auto-start the slideshow
+        // Auto-start the slideshow and music
         startSlideshow();
+        startBackgroundMusic();
     }
 
     private void initializeViews() {
@@ -88,16 +92,12 @@ public class SlideShowActivity extends AppCompatActivity {
             ArrayList<String> uriStrings = getIntent().getStringArrayListExtra("slideUris");
             slideShowUris = new ArrayList<>();
 
-            Log.d("SlideshowActivity", "Received " + (uriStrings != null ? uriStrings.size() : 0) + " image URIs");
-
             if (uriStrings != null && !uriStrings.isEmpty()) {
                 for (String uriString : uriStrings) {
                     try {
                         if (uriString != null && !uriString.isEmpty()) {
                             Uri uri = Uri.parse(uriString);
                             slideShowUris.add(uri);
-                            Log.d("SlideshowActivity", "Successfully parsed URI: " + uriString);
-                            Log.d("SlideshowActivity", "URI scheme: " + uri.getScheme());
                         }
                     } catch (Exception e) {
                         Log.e("SlideshowActivity", "Error parsing URI: " + uriString, e);
@@ -106,46 +106,96 @@ public class SlideShowActivity extends AppCompatActivity {
             }
 
             if (slideShowUris.isEmpty()) {
-                Log.e("SlideshowActivity", "No valid images found for slideshow");
-                Toast.makeText(this, "No valid images found for slideshow", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "No valid images for slideshow", Toast.LENGTH_LONG).show();
                 finish();
                 return;
             }
-
-            Log.d("SlideshowActivity", "Loaded " + slideShowUris.size() + " images for slideshow");
 
             // Show first image
             showSlide(currentPosition);
 
         } catch (Exception e) {
             Log.e("SlideshowActivity", "Error loading slideshow data: " + e.getMessage(), e);
-            Toast.makeText(this, "Error loading slideshow: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Error loading slideshow", Toast.LENGTH_LONG).show();
             finish();
         }
     }
+
     private void showSlide(int position) {
         if (isFinishing() || isDestroyed()) return;
         if (position >= 0 && slideShowUris != null && position < slideShowUris.size() && imageView != null) {
             try {
-                Uri uri = slideShowUris.get(position);
-                Log.d("SlideshowActivity", "Loading slide " + position + ": " + uri);
-
                 Glide.with(this)
-                        .load(uri)
-                        .error(R.drawable.ic_error)
+                        .load(slideShowUris.get(position))
                         .into(imageView);
 
                 if (tvCounter != null) {
                     tvCounter.setText((position + 1) + " / " + slideShowUris.size());
                 }
-            } catch (SecurityException e) {
-                Log.e("SlideshowActivity", "Security exception loading image: " + e.getMessage());
-                Toast.makeText(this, "Permission denied to access images", Toast.LENGTH_SHORT).show();
             } catch (Throwable t) {
                 Log.e("SlideshowActivity", "Error showing slide at position " + position, t);
             }
         }
     }
+
+    // Music Control Methods
+    private void startBackgroundMusic() {
+        try {
+            if (mediaPlayer != null) {
+                mediaPlayer.release();
+            }
+
+            // Create media player for background music
+            mediaPlayer = MediaPlayer.create(this, R.raw.background_music);
+
+            if (mediaPlayer != null) {
+                mediaPlayer.setLooping(true); // Loop the music
+                mediaPlayer.setVolume(0.7f, 0.7f); // Set volume (0.0 to 1.0)
+                mediaPlayer.start();
+                isMusicPlaying = true;
+                Log.d("SlideshowActivity", "Background music started");
+            } else {
+                Log.e("SlideshowActivity", "Failed to create media player - music file may be missing");
+                Toast.makeText(this, "Background music not available", Toast.LENGTH_SHORT).show();
+            }
+
+        } catch (Exception e) {
+            Log.e("SlideshowActivity", "Error starting background music: " + e.getMessage(), e);
+            Toast.makeText(this, "Error playing background music", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void stopBackgroundMusic() {
+        try {
+            if (mediaPlayer != null) {
+                if (mediaPlayer.isPlaying()) {
+                    mediaPlayer.stop();
+                }
+                mediaPlayer.release();
+                mediaPlayer = null;
+                isMusicPlaying = false;
+                Log.d("SlideshowActivity", "Background music stopped");
+            }
+        } catch (Exception e) {
+            Log.e("SlideshowActivity", "Error stopping background music: " + e.getMessage(), e);
+        }
+    }
+
+    private void toggleMusic() {
+        if (mediaPlayer != null) {
+            if (isMusicPlaying) {
+                mediaPlayer.pause();
+                isMusicPlaying = false;
+                Toast.makeText(this, "Music paused", Toast.LENGTH_SHORT).show();
+            } else {
+                mediaPlayer.start();
+                isMusicPlaying = true;
+                Toast.makeText(this, "Music resumed", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    // Button click methods
     public void onPlayPauseClick(View view) {
         if (isPlaying) {
             pauseSlideshow();
@@ -173,6 +223,10 @@ public class SlideShowActivity extends AppCompatActivity {
                 restartSlideshow();
             }
         }
+    }
+
+    public void onMusicToggleClick(View view) {
+        toggleMusic();
     }
 
     public void onCloseClick(View view) {
@@ -216,12 +270,26 @@ public class SlideShowActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         pauseSlideshow();
+        // Pause music when app goes to background
+        if (mediaPlayer != null && isMusicPlaying) {
+            mediaPlayer.pause();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Resume music when app comes to foreground
+        if (mediaPlayer != null && isMusicPlaying) {
+            mediaPlayer.start();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         stopSlideshow();
+        stopBackgroundMusic(); // Important: release media player
         if (slideshowHandler != null) {
             slideshowHandler.removeCallbacks(slideshowRunnable);
         }

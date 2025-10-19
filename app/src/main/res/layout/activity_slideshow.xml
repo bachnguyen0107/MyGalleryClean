@@ -42,7 +42,7 @@
 
     </LinearLayout>
 
-    <!-- Simple Bottom Controls -->
+    <!-- Bottom Controls -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -81,6 +81,16 @@
             android:contentDescription="Next"
             android:tint="@android:color/white"
             android:onClick="onNextClick" />
+        <!-- Add this button to your control buttons layout -->
+        <ImageButton
+            android:id="@+id/btnMusic"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@android:drawable/ic_media_play"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Toggle Music"
+            android:tint="@android:color/white"
+            android:onClick="onMusicToggleClick" />
 
     </LinearLayout>
 
