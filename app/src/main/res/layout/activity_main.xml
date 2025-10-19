@@ -28,6 +28,18 @@
             android:src="@drawable/ic_edit"
             app:tint="@color/black" />
 
+        <!-- 🆕 Delete Album Button -->
+        <ImageButton
+            android:id="@+id/btnDeleteAlbum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Delete Album"
+            android:padding="4dp"
+            android:layout_marginStart="4dp"
+            android:src="@android:drawable/ic_menu_delete"
+            app:tint="@color/black" />
+
         <!-- Album Spinner -->
         <Spinner
             android:id="@+id/albumSpinner"
@@ -60,7 +72,6 @@
             android:padding="4dp"
             android:src="@android:drawable/ic_menu_search"
             app:tint="@color/black" />
-
     </LinearLayout>
 
     <!-- Search Results Header -->
@@ -92,7 +103,6 @@
             android:backgroundTint="@color/purple_500"
             android:paddingStart="16dp"
             android:paddingEnd="16dp" />
-
     </LinearLayout>
 
     <!-- RecyclerView for Photos -->
@@ -104,7 +114,7 @@
         android:scrollbars="vertical"
         tools:listitem="@layout/item_image" />
 
-    <!-- Bottom Buttons Container - REORGANIZED -->
+    <!-- Bottom Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -147,10 +157,9 @@
                 app:iconPadding="8dp"
                 app:cornerRadius="12dp"
                 android:layout_marginStart="8dp" />
-
         </LinearLayout>
 
-        <!-- Create Album FAB - Centered below -->
+        <!-- Create Album FAB -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -165,9 +174,6 @@
                 android:contentDescription="Create Album"
                 app:tint="@android:color/white"
                 app:backgroundTint="@color/purple_500" />
-
         </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>
