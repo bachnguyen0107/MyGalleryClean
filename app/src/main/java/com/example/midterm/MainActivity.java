@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private GridLayoutManager gridLayoutManager;
     private LinearLayoutManager listLayoutManager;
     private MaterialButton btnSlideshow;
+    private ImageButton btnDeleteAlbum;
 
 
     RecyclerView recyclerView;
@@ -118,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
         albumSpinner = findViewById(R.id.albumSpinner);
         fabAddAlbum = findViewById(R.id.fabAddAlbum);
         btnRenameAlbum = findViewById(R.id.btnRenameAlbum);
+        btnDeleteAlbum = findViewById(R.id.btnDeleteAlbum);
         btnAddPhoto = findViewById(R.id.btnAddPhoto);
         btnSearch = findViewById(R.id.btnSearch);
         btnToggleView = findViewById(R.id.btnToggleView);
@@ -142,10 +144,36 @@ public class MainActivity extends AppCompatActivity {
 
         fabAddAlbum.setOnClickListener(v -> showAddAlbumDialog());
         btnRenameAlbum.setOnClickListener(v -> showRenameAlbumDialog());
+        btnDeleteAlbum.setOnClickListener(v -> showDeleteAlbumDialog());
         btnAddPhoto.setOnClickListener(v -> openImagePicker());
         btnSearch.setOnClickListener(v -> showSearchDialog());
         btnToggleView.setOnClickListener(v -> toggleView());
         btnSlideshow.setOnClickListener(v -> showSlideshowDialog());
+    }
+
+    private void showDeleteAlbumDialog() {
+        if (currentAlbum.equals("All Photos")) {
+            Toast.makeText(this, "You cannot delete 'All Photos'", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Album")
+                .setMessage("Are you sure you want to delete the album '" + currentAlbum + "'?")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    albums.remove(currentAlbum);
+                    saveAlbums();
+                    setupAlbumSpinner();
+
+                    // Switch to All Photos after deletion
+                    currentAlbum = "All Photos";
+                    albumSpinner.setSelection(0);
+                    loadImagesFromGallery();
+
+                    Toast.makeText(this, "Album deleted successfully", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     // Album Management
